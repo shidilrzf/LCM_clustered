@@ -49,3 +49,9 @@ def init_weights(module):
         elif isinstance(m, nn.Sequential):
             for sub_mod in m:
                 init_weights(sub_mod)
+
+
+def sample_uniform(shape, a=-1, b=1, var=1. / 10, use_cuda=False):
+    shape = list(shape) if isinstance(shape, tuple) else shape
+    type_tfloat = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+    return type_tfloat(*shape).uniform_(a, b) * var
