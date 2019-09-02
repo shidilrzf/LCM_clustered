@@ -149,4 +149,4 @@ for epoch in range(start_epoch, end_epoch + 1):
             dataloader.save_latent_net(name=MODEL_NAME + "_latentnet_" + str(epoch) + "_", latent_dir=LATENT_CHECK_DIR)
             torch.save(G.state_dict(), '../models/CelebA/' + MODEL_NAME + str(epoch))
 
-# writer.close()
+logger.close()
