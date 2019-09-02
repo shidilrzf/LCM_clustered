@@ -8,20 +8,48 @@ from models import *
 from losses import *
 from utils import *
 import os
+import argparse
 
 
-# Settings
-use_cuda = False
-use_cuda = use_cuda and torch.cuda.is_available()
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-device = torch.device("cuda:0" if torch.cuda.is_available() and use_cuda else "cpu")
+parser = argparse.ArgumentParser(description='Cluster LCM')
 
-clamp_images = True
-clamp_value = 0.01
-num_cluster = 10
-start_epoch, end_epoch = 0, 100
+# Settings cuda
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disables cuda (default: False')
 
-writer = SummaryWriter(log_dir='../runs')
+# Logging
+parser.add_argument('--log-dir', type=str, default='../runs',
+                    help='logging directory (default: ../runs)')
+
+
+# Training
+parser.add_argument('--epochs', type=int, default=100, metavar='N',
+                    help='number of training epochs')
+
+parser.add_argument('--num-clusters', type=int, default=10, metavar='N',
+                    help='number of latent clusters (default: 10)')
+
+parser.add_argument('--clamp', action='store_true', default=True,
+                    help='Clamps values of training images (default: True')
+
+parser.add_argument('--clamp-value', type=float, default=0.01,
+                    help='Clamp values (default: 0.01')
+
+# Optim
+parser.add_argument('--batch-size', type=int, default=10, metavar='N',
+                    help='Batch size (default: 10)')
+
+
+args = parser.parse_args()
+
+# Set cuda
+args.cuda = not args.no_cuda and torch.cuda.is_available()
+device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
+
+start_epoch, end_epoch = 0, args.epochs
+
+# Logging
+writer = SummaryWriter(log_dir=args.log_dir)
 
 # models
 model_name = 'CelebA_cluster1'
@@ -37,29 +65,26 @@ generator.to(device)
 
 
 # Datasets and loaders
-batch_size = 10
-num_train = 500
 noise_sz = 40
 dataset_fp = '/data/CelebA/celebA_redux_500/*.png'
 
 # Build dataset
 train_dataset = CelebAClusterDataset(dataset_fp, latentnet_fp, None)
-dataloader = loader(train_dataset, device, num_cluster, model_name)
+dataloader = loader(train_dataset, device, args.num_clusters, model_name)
 
 # Init and load latent space networks
 dataloader.load(latent_net_name, None, None, latentnet_fp)
 
 # Generate uniform noise
-noise = sample_uniform((1, 2, noise_sz, noise_sz), -1, 1, 1. / 10, use_cuda)
+noise = sample_uniform((1, 2, noise_sz, noise_sz), -1, 1, 1. / 10, args.cuda)
 noise = noise.to(device)
 
 # Optimizer
 gen_optimizer = optim.SGD(generator.parameters(), lr=0.03)
 
+
 # main train_validate loop
-
-
-def train(epoch, data_in, net_in, num_epochs=100):
+def train(epoch, data_in, net_in, num_epochs=args.epochs):
     """
      Jointly trains the latent networks and the generator network.
      """
@@ -95,26 +120,31 @@ def train(epoch, data_in, net_in, num_epochs=100):
 
         optim_nets.step()
         gen_optimizer.step()
-        if clamp_images:
+        if args.clamp:
             for i in range(batch_size):
-                net_in[i].restrict(-1.0 * clamp_value, clamp_value)
+                net_in[i].restrict(-1.0 * args.clamp_value, args.clamp_value)
     optim_nets.zero_grad()
     gen_optimizer.zero_grad()
-    # tensorboard reporting here
+    # Logging
+    print('====> Epoch: {} Average Train loss: {:.4f}'.format(epoch, loss.item()))
+
+    writer.add_scalar('loss', loss.data.item(), epoch)
+    writer.add_scalar('laplacian', lap_loss.item(), epoch)
+    writer.add_scalar('MSE', mse_loss.item(), epoch)
+
     return net_in
 
 
 for epoch in range(start_epoch, end_epoch + 1):
     #Get a batch of images, their latent networks and corresponding network ids
-    data_in, latent_nets, latent_net_ids = dataloader.get_batch(batch_size=batch_size)
+    data_in, latent_nets, latent_net_ids = dataloader.get_batch(batch_size=args.batch_size)
 
     #train the latent networks and generator
     latent_nets = train(epoch, data_in, latent_nets, num_epochs=50)
 
     #update the latent networks
     dataloader.update_state(latent_nets, latent_net_ids)
-    print(fname + " Epoch: ", epoch)
-    if epoch % SAVE_EVERY == 0:
+    if epoch % 100 == 0:
         if epoch > 0:
             dataloader.save_latent_net(name=MODEL_NAME + "_latentnet_" + str(epoch) + "_", latent_dir=LATENT_CHECK_DIR)
             torch.save(G.state_dict(), '../models/CelebA/' + MODEL_NAME + str(epoch))

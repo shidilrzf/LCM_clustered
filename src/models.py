@@ -62,7 +62,7 @@ class EncDecCelebA(nn.Module):
         x = self.upsamp(x)
         x = F.leaky_relu(self.convT5_bn(self.convT5(x)), self.lr_slope)  # 128
         x = F.leaky_relu(self.convT6_bn(self.convT6(x)), self.lr_slope)  # 128
-        x = F.sigmoid(self.convT7(x))  # 128
+        x = torch.sigmoid(self.convT7(x))  # 128
 
         return x
 

@@ -25,7 +25,7 @@ class CelebAClusterDataset(Dataset):
         cluster_id = randint(0, self.K - 1)
         img = imread(self.img_list[idx])
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-        img = resize(img, (self.img_size, self.img_size))
+        img = resize(img, (self.img_size, self.img_size), mode='constant')
         img = (img - img.min()) / (img.max() - img.min())
         img = torch.from_numpy(img).permute(2, 0, 1)
         return img, cluster_id

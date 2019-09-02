@@ -1,0 +1,11 @@
+* Bugs
+- [ ] GPU version currently throwing an exemption
+- [ ] Get rid of skimage warning
+
+* General
+- [ ] Add images to Tensorboard
+- [ ] Fix the batch loader to run the batch over all images
+- [ ] Cleanup the weird double epoch loop
+
+* Expand / ideas
+- [ ] Only update the best cluster & noise pair network instead of all
