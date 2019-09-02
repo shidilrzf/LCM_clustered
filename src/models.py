@@ -90,13 +90,8 @@ class Latent4LSND(nn.Module):
     def forward(self, x):
 
         x = F.leaky_relu(self.conv1_bn(self.conv1(x)), self.lr_slope)
-        print(x.shape)
         x = F.leaky_relu(self.conv2_bn(self.conv2(x)), self.lr_slope)
-        print(x.shape)
         x = F.leaky_relu(self.conv3_bn(self.conv3(x)), self.lr_slope)
-        print(x.shape)
-
         x = F.leaky_relu(self.conv4(x), self.lr_slope)
-        print(x.shape)
 
         return x

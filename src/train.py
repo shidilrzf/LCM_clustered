@@ -15,7 +15,7 @@ use_cuda = False
 use_cuda = use_cuda and torch.cuda.is_available()
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 device = torch.device("cuda:0" if torch.cuda.is_available() and use_cuda else "cpu")
-latent_net_name = 'Latent4LSND'
+
 clamp_images = True
 num_cluster = 10
 start_epoch, end_epoch = 0, 100
@@ -24,10 +24,11 @@ writer = SummaryWriter(log_dir='../runs')
 
 # models
 model_name = 'CelebA_cluster1'
+latent_net_name = 'Latent4LSND'
 latentnet_fp = '../' + model_name + '_latent/'
 
-if not os.path.exists(laten_check_dir):
-    os.makedirs(laten_check_dir)
+if not os.path.exists(latentnet_fp):
+    os.makedirs(latentnet_fp)
 
 # Generator model
 generator = EncDecCelebA(in_channels=64)
@@ -38,7 +39,7 @@ generator.to(device)
 batch_size = 10
 num_train = 500
 noise_sz = 40
-dataset_fp = '/data/CelebA/celebA_redux_500/'
+dataset_fp = '/data/CelebA/celebA_redux_500/*.png'
 
 # Build dataset
 train_dataset = CelebAClusterDataset(dataset_fp, latentnet_fp, None)
@@ -48,7 +49,7 @@ dataloader = loader(train_dataset, device, num_cluster, model_name)
 dataloader.load(latent_net_name, None, None, latentnet_fp)
 
 # Generate uniform noise
-noise = uniform(1, 2, noise_sz, noise_sz)
+noise = sample_uniform((1, 2, noise_sz, noise_sz), -1, 1, 1. / 10, use_cuda)
 noise = noise.to(device)
 
 # Optimizer
@@ -73,7 +74,7 @@ def train(epoch, data_in, net_in, num_epochs=100):
             p.requires_grad = True
         nets_params += list(net_in[i].parameters())
 
-    optim_nets = optim.SGD(nets_params, lr=0.03, weight_decay=L2_W)
+    optim_nets = optim.SGD(nets_params, lr=0.03, weight_decay=0.001)
 
     for ep in range(num_epochs):
         gen_optimizer.zero_grad()
@@ -81,12 +82,12 @@ def train(epoch, data_in, net_in, num_epochs=100):
 
         map_out_lst = []
         for i in range(batch_size):
-            m_out = net_in[i](s)
+            m_out = net_in[i](noise)
             map_out_lst.append(m_out)
         map_out = torch.cat(map_out_lst, 0)
         g_out = generator(map_out)
 
-        lap_loss = loss_dog(g_out, data_in)
+        lap_loss = laploss(g_out, data_in)
         mse_loss = F.mse_loss(g_out, data_in)
         loss = mse_loss + lap_loss
         loss.backward()

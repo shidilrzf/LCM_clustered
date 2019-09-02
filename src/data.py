@@ -1,8 +1,8 @@
 import os
 from random import randint
 import torch
-import torch.utils.data.Dataset as Dataset
 import models as lm
+from torch.utils.data import Dataset
 import glob
 from skimage.io import imread
 
@@ -12,7 +12,7 @@ class CelebAClusterDataset(Dataset):
         self.file_dir = file_dir
         self.net_dir = net_dir
         self.transform = transform
-        self.img_list = [file_dir + '/' + f for f in glob.glob('*.png')]
+        self.img_list = glob.glob(self.file_dir)
         self.K = 10
 
     def __len__(self):
@@ -33,7 +33,7 @@ class loader(object):
         self.device = device
         self.num_clusters = K
         self.dataset = dataset
-        self.num_samples = len(dataset)
+        self.num_samples = len(self.dataset)
         self.temp_latent_dir = 'latent_temp_dir/' + self.model_name + '_latent_temp/'
 
         if not os.path.exists(self.temp_latent_dir):
@@ -59,10 +59,10 @@ class loader(object):
                     raise ValueError("\'latent_dir\' must be specified when loading a saved model")
                 print("Num prev Loaded: ", self.num_samples)
                 latent_net.load_state_dict(
-                    torch.load(latent_dir + saved_model_name + "_latentnet_" + str(num_epoch) + '_' + str(i + 1)))
-            torch.save(latent_net.state_dict(), self.temp_latent_dir + "temp_latent_net_" + str(i + 1))
+                    torch.load(latent_dir + saved_model_name + "_latentnet_" + str(num_epoch) + '_' + str(i)))
+            torch.save(latent_net.state_dict(), self.temp_latent_dir + "temp_latent_net_" + str(i))
             if num_epoch is None:
-                print("Networks loaded: ", i + 1)
+                print("Networks loaded: ", i)
         print("Number of samples loaded: ", self.num_clusters)
 
     def get_nets(self, net_ids):
