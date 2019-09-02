@@ -61,10 +61,11 @@ def gauss_kernel(size=5, sigma=1.0):
 def conv_gauss(t_input, stride=1, k_size=5, sigma=1.6, repeats=1):
     t_kernel_np = gauss_kernel(size=k_size, sigma=sigma).reshape([1, 1, k_size, k_size])
     t_input_device = t_input.device
-    t_kernel = torch.from_numpy(t_kernel_np).to(t_input_device)
+    t_kernel = torch.from_numpy(t_kernel_np)
     num_channels = t_input.data.shape[1]
-    t_kernel3 = torch.cat([t_kernel] * num_channels, 0)
-    t_result = t_input
+    t_kernel3 = torch.cat([t_kernel] * num_channels, 0).type(torch.FloatTensor).to(t_input_device)
+    t_result = t_input.type(torch.FloatTensor).to(t_input_device)
+
     for r in range(repeats):
         t_result = F.conv2d(t_result, t_kernel3, stride=1, padding=2, groups=num_channels)
     return t_result
@@ -72,7 +73,7 @@ def conv_gauss(t_input, stride=1, k_size=5, sigma=1.6, repeats=1):
 
 def make_laplacian_pyramid(t_img, max_levels):
     t_pyr = []
-    current = t_img
+    current = t_img.type(torch.FloatTensor)
     for level in range(max_levels):
         t_gauss = conv_gauss(current, stride=1, k_size=5, sigma=2.0)
         t_diff = current - t_gauss

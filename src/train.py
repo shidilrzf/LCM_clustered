@@ -17,6 +17,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 device = torch.device("cuda:0" if torch.cuda.is_available() and use_cuda else "cpu")
 
 clamp_images = True
+clamp_value = 0.01
 num_cluster = 10
 start_epoch, end_epoch = 0, 100
 
@@ -94,10 +95,9 @@ def train(epoch, data_in, net_in, num_epochs=100):
 
         optim_nets.step()
         gen_optimizer.step()
-        if RESTRICT:
-            val = RESTRICT_VAL
+        if clamp_images:
             for i in range(batch_size):
-                net_in[i].restrict(-1.0 * val, val)
+                net_in[i].restrict(-1.0 * clamp_value, clamp_value)
     optim_nets.zero_grad()
     gen_optimizer.zero_grad()
     # tensorboard reporting here

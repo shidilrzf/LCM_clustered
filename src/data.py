@@ -3,8 +3,10 @@ from random import randint
 import torch
 import models as lm
 from torch.utils.data import Dataset
+from skimage.transform import resize
 import glob
 from skimage.io import imread
+import cv2
 
 
 class CelebAClusterDataset(Dataset):
@@ -14,13 +16,18 @@ class CelebAClusterDataset(Dataset):
         self.transform = transform
         self.img_list = glob.glob(self.file_dir)
         self.K = 10
+        self.img_size = 128
 
     def __len__(self):
         return len(self.img_list)
 
     def __getitem__(self, idx):
         cluster_id = randint(0, self.K - 1)
-        img = torch.from_numpy(imread(self.img_list[idx])).permute(2, 0, 1)
+        img = imread(self.img_list[idx])
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        img = resize(img, (self.img_size, self.img_size))
+        img = (img - img.min()) / (img.max() - img.min())
+        img = torch.from_numpy(img).permute(2, 0, 1)
         return img, cluster_id
 
 
@@ -92,10 +99,14 @@ class loader(object):
 
         for i in range(eff_batch):
             img, cluster_id = self.dataset.__getitem__(start + i)
-            data_out.append(img)
+            data_out.append(img.unsqueeze(0))
             latent_net_ids.append(cluster_id)
 
         latent_nets = self.get_nets(latent_net_ids)
+
+        # convert lists to batch_num, channel, h, w
+        data_out = torch.cat(data_out).type(torch.FloatTensor).to(self.device)
+
         return data_out, latent_nets, latent_net_ids
 
     def update_state(self, latent_nets, latent_nets_ids):
