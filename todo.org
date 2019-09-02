@@ -1,6 +1,7 @@
 * Bugs
 - [ ] GPU version currently throwing an exemption
 - [ ] Get rid of skimage warning
+- [ ] Find out why the logger doesn't display an id in TB
 
 * General
 - [ ] Add images to Tensorboard
