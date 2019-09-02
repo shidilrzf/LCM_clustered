@@ -1,11 +1,31 @@
 import os
 from random import randint
 import torch
+import torch.utils.data.Dataset as Dataset
 import models as lm
+import glob
+from skimage.io import imread
+
+
+class CelebAClusterDataset(Dataset):
+    def __init__(self, file_dir, net_dir, transform=None):
+        self.file_dir = file_dir
+        self.net_dir = net_dir
+        self.transform = transform
+        self.img_list = [file_dir + '/' + f for f in glob.glob('*.png')]
+        self.K = 10
+
+    def __len__(self):
+        return len(self.img_list)
+
+    def __getitem__(self, idx):
+        cluster_id = randint(0, self.K - 1)
+        img = torch.from_numpy(imread(self.img_list[idx])).permute(2, 0, 1)
+        return img, cluster_id
 
 
 class loader(object):
-    def __init__(self, dataset, device, K, model_name=None, img_cluster_id=None):
+    def __init__(self, dataset, device, K, model_name=None):
 
         self.end = 0
         self.start = 0
@@ -13,16 +33,11 @@ class loader(object):
         self.device = device
         self.num_clusters = K
         self.dataset = dataset
-        self.num_samples = self.dataset.data.shape[0]
+        self.num_samples = len(dataset)
         self.temp_latent_dir = 'latent_temp_dir/' + self.model_name + '_latent_temp/'
 
         if not os.path.exists(self.temp_latent_dir):
             os.makedirs(self.temp_latent_dir)
-
-        if not img_cluster_id:
-            self.img_cluster_id = [randint(1, K) for i in range(self.num_samples)]
-        else:
-            self.img_cluster_id = img_cluster_id
 
     def load(self, latent_net_name,
              num_epoch=None,
@@ -64,9 +79,7 @@ class loader(object):
         for i in range(num_nets):
             torch.save(nets[i].state_dict(), self.temp_latent_dir + "temp_latent_net_" + str(net_ids[i]))
 
-    def get_batch(self, batch_size=10, img_cluster_id_updated=None):
-        if img_cluster_id_updated:
-            self.img_cluster_id = img_cluster_id_updated
+    def get_batch(self, batch_size=10):
         self.start = self.end
         start = self.start
         end = min(start + batch_size, self.num_samples)
@@ -76,9 +89,36 @@ class loader(object):
         self.end = end
         data_out = []
         latent_net_ids = []
+
         for i in range(eff_batch):
-            data_out.append(self.dataset.__getitem__(start + i)[0])
-            latent_net_ids.append(self.img_cluster_id[start + i])
+            img, cluster_id = self.dataset.__getitem__(start + i)
+            data_out.append(img)
+            latent_net_ids.append(cluster_id)
 
         latent_nets = self.get_nets(latent_net_ids)
         return data_out, latent_nets, latent_net_ids
+
+    def update_state(self, latent_nets, latent_nets_ids):
+        """
+          Updates the latent networks during training.
+          Parameters:
+                    latent_nets (List): List of latent networks (nn.Modules) to be saved.
+                    latent_nets_ids (List): List of ids of the latent networks to be saved.
+          """
+        self.save_nets(latent_nets, latent_nets_ids)
+
+    def save_latent_net(self, latent_dir, name):
+        """
+          Saves the latent networks in `latent_dir` to create a model checkpoint.
+          Parameters:
+                    latent_dir (String): Name of directory where the latent networks are saved.
+                    name (String): Name with which the latent networks must be saved.
+          """
+        if not os.path.exists(latent_dir):
+            os.makedirs(latent_dir)
+        for i in range(self.K):
+            latent_net = self.get_nets([i])[0]
+            torch.save(latent_net.state_dict(), latent_dir + name + str(i))
+
+        def get_vec(self, idx):
+            return self.data_lst[idx][1]
