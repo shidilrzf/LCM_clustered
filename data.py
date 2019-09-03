@@ -127,7 +127,7 @@ class loader(object):
           """
         if not os.path.exists(latent_dir):
             os.makedirs(latent_dir)
-        for i in range(self.K):
+        for i in range(self.num_clusters):
             latent_net = self.get_nets([i])[0]
             torch.save(latent_net.state_dict(), latent_dir + name + str(i))
 

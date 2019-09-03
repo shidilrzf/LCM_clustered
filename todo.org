@@ -1,12 +1,15 @@
 * Bugs
-- [ ] GPU version currently throwing an exemption
-- [ ] Get rid of skimage warning
+- [X] GPU version currently throwing an exemption
+- [X] Get rid of skimage warning (no possible)
 - [X] Find out why the logger doesn't display an id in TB
+- [ ] Check shuffle or coverage in the dataloader, results are too good.
+- [ ] Plot more images
 
 * General
 - [X] Add images to Tensorboard
 - [ ] Fix the batch loader to run the batch over all images
 - [ ] Cleanup the weird double epoch loop
+- [ ] Check the model saving
 
 * Expand / ideas
 - [ ] Only update the best cluster & noise pair network instead of all

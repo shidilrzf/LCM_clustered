@@ -164,7 +164,7 @@ for epoch in range(start_epoch, end_epoch + 1):
     dataloader.update_state(latent_nets, latent_net_ids)
     if epoch % 100 == 0:
         if epoch > 0:
-            dataloader.save_latent_net(name=model_name + "_latentnet_" + str(epoch) + "_", latent_dir=LATENT_CHECK_DIR)
-            torch.save(G.state_dict(), '../models/CelebA/' + model_name + str(epoch))
+            dataloader.save_latent_net(name=model_name + "_latentnet_" + str(epoch) + "_", latent_dir=latentnet_fp)
+            torch.save(generator.state_dict(), '../models/CelebA/' + model_name + str(epoch))
 
 writer.close()
