@@ -35,6 +35,10 @@ parser.add_argument('--clamp-value', type=float, default=0.01,
 parser.add_argument('--batch-size', type=int, default=10, metavar='N',
                     help='Batch size (default: 10)')
 
+# Cluster winner takes all
+parser.add_argument('--wta', action='store_true', default=True,
+                    help='Winner takes all, only update best subnet (default: True')
+
 
 args = parser.parse_args()
 
@@ -80,7 +84,7 @@ gen_optimizer = optim.SGD(generator.parameters(), lr=0.03)
 
 
 # main train_validate loop
-def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
+def train(epoch, data_in, latent_net_ids, net_in, num_epochs=args.epochs, use_cuda=False):
     """
      Jointly trains the latent networks and the generator network.
      """
@@ -94,10 +98,11 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
     nets_params = []
 
     for i in range(batch_size):
-        net_in[i] = net_in[i].cuda() if use_cuda else net_in[i]
-        for p in net_in[i].parameters():
+        ind = latent_net_ids[i]
+        net_in[ind] = net_in[ind].cuda() if use_cuda else net_in[ind]
+        for p in net_in[ind].parameters():
             p.requires_grad = True
-        nets_params += list(net_in[i].parameters())
+        nets_params += list(net_in[ind].parameters())
 
     optim_nets = optim.SGD(nets_params, lr=0.03, weight_decay=0.001)
 
@@ -107,7 +112,8 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
 
         map_out_lst = []
         for i in range(batch_size):
-            m_out = net_in[i](noise)
+            ind = latent_net_ids[i]
+            m_out = net_in[ind](noise)
             map_out_lst.append(m_out)
         map_out = torch.cat(map_out_lst, 0)
         g_out = generator(map_out)
@@ -121,7 +127,8 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
         gen_optimizer.step()
         if args.clamp:
             for i in range(batch_size):
-                net_in[i].restrict(-1.0 * args.clamp_value, args.clamp_value)
+                ind = latent_net_ids[i]
+                net_in[ind].restrict(-1.0 * args.clamp_value, args.clamp_value)
     optim_nets.zero_grad()
     gen_optimizer.zero_grad()
 
@@ -132,7 +139,8 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
         generator.eval()
         map_out_lst = []
         for i in range(batch_size):
-            m_out = net_in[i](noise)
+            ind = latent_net_ids[i]
+            m_out = net_in[ind](noise)
             map_out_lst.append(m_out)
 
         map_out = torch.cat(map_out_lst, 0)
@@ -158,7 +166,7 @@ for epoch in range(start_epoch, end_epoch + 1):
     data_in, latent_nets, latent_net_ids = dataloader.get_batch(batch_size=args.batch_size)
 
     #train the latent networks and generator
-    latent_nets = train(epoch, data_in, latent_nets, num_epochs=50, use_cuda=args.cuda)
+    latent_nets = train(epoch, data_in, latent_net_ids, latent_nets, num_epochs=50, use_cuda=args.cuda)
 
     #update the latent networks
     dataloader.update_state(latent_nets, latent_net_ids)

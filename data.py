@@ -17,12 +17,13 @@ class CelebAClusterDataset(Dataset):
         self.img_list = glob.glob(self.file_dir)
         self.K = 10
         self.img_size = 128
+        self.labels = [randint(0, self.K - 1) for _ in range(len(self.img_list))]
 
     def __len__(self):
         return len(self.img_list)
 
     def __getitem__(self, idx):
-        cluster_id = randint(0, self.K - 1)
+        cluster_id = self.labels[idx]
         img = imread(self.img_list[idx])
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         img = resize(img, (self.img_size, self.img_size), mode='constant')

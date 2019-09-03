@@ -4,12 +4,14 @@
 - [X] Find out why the logger doesn't display an id in TB
 - [ ] Check shuffle or coverage in the dataloader, results are too good.
 - [ ] Plot more images
+- [X] Fix batch size vs cluster size
 
 * General
 - [X] Add images to Tensorboard
 - [ ] Fix the batch loader to run the batch over all images
 - [ ] Cleanup the weird double epoch loop
 - [ ] Check the model saving
+- [ ] Implement inpainting and reconstruction from the generator
 
 * Expand / ideas
 - [ ] Only update the best cluster & noise pair network instead of all
