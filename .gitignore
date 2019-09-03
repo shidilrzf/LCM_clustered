@@ -1,5 +1,6 @@
 # Maurits
 src/latent_temp_dir/
+latent_temp_dir/
 *.org
 todo.txt
 test.py
