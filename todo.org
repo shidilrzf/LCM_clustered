@@ -1,10 +1,10 @@
 * Bugs
 - [ ] GPU version currently throwing an exemption
 - [ ] Get rid of skimage warning
-- [ ] Find out why the logger doesn't display an id in TB
+- [X] Find out why the logger doesn't display an id in TB
 
 * General
-- [ ] Add images to Tensorboard
+- [X] Add images to Tensorboard
 - [ ] Fix the batch loader to run the batch over all images
 - [ ] Cleanup the weird double epoch loop
 

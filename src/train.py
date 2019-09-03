@@ -1,8 +1,9 @@
-from tensorboardX import SummaryWriter
 import torch
 import torch.optim
 import torch.nn.functional as F
 import torch.optim as optim
+from tensorboardX import SummaryWriter
+import torchvision.utils as tvu
 from data import *
 from models import *
 from losses import *
@@ -23,7 +24,7 @@ parser.add_argument('--log-dir', type=str, default='../runs',
 
 
 # Training
-parser.add_argument('--epochs', type=int, default=100, metavar='N',
+parser.add_argument('--epochs', type=int, default=500, metavar='N',
                     help='number of training epochs')
 
 parser.add_argument('--num-clusters', type=int, default=10, metavar='N',
@@ -84,10 +85,12 @@ gen_optimizer = optim.SGD(generator.parameters(), lr=0.03)
 
 
 # main train_validate loop
-def train(epoch, data_in, net_in, num_epochs=args.epochs):
+def train(epoch, data_in, net_in, num_epochs=args.epochs, use_cuda=False):
     """
      Jointly trains the latent networks and the generator network.
      """
+    data_in = data_in.cuda() if use_cuda else data_in
+
     generator.train()
     for p in generator.parameters():
         p.requires_grad = True
@@ -96,6 +99,7 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs):
     nets_params = []
 
     for i in range(batch_size):
+        net_in[i] = net_in[i].cuda() if use_cuda else net_in[i]
         for p in net_in[i].parameters():
             p.requires_grad = True
         nets_params += list(net_in[i].parameters())
@@ -125,12 +129,31 @@ def train(epoch, data_in, net_in, num_epochs=args.epochs):
                 net_in[i].restrict(-1.0 * args.clamp_value, args.clamp_value)
     optim_nets.zero_grad()
     gen_optimizer.zero_grad()
+
     # Logging
     print('====> Epoch: {} Average Train loss: {:.4f}'.format(epoch, loss.item()))
 
-    writer.add_scalar('loss', loss.data.item(), epoch)
-    writer.add_scalar('laplacian', lap_loss.item(), epoch)
-    writer.add_scalar('MSE', mse_loss.item(), epoch)
+    if epoch % 10 == 0:
+        generator.eval()
+        map_out_lst = []
+        for i in range(batch_size):
+            m_out = net_in[i](noise)
+            map_out_lst.append(m_out)
+
+        map_out = torch.cat(map_out_lst, 0)
+        g_out = generator(map_out)
+
+        writer.add_scalar('loss', loss.data.item(), epoch)
+        writer.add_scalar('laplacian', lap_loss.item(), epoch)
+        writer.add_scalar('MSE', mse_loss.item(), epoch)
+
+        image_grid = tvu.make_grid(data_in[:5].cpu().detach(), normalize=False, scale_each=True)
+        gen_grid = tvu.make_grid(g_out[:5].cpu().detach(), normalize=False, scale_each=True)
+        latent_grid = tvu.make_grid(map_out[:10, :3, :, :].cpu().detach(), normalize=False, scale_each=True)
+
+        writer.add_image('real', image_grid, epoch)
+        writer.add_image('generated', gen_grid, epoch)
+        writer.add_image('latent', latent_grid, epoch)
 
     return net_in
 
@@ -140,7 +163,7 @@ for epoch in range(start_epoch, end_epoch + 1):
     data_in, latent_nets, latent_net_ids = dataloader.get_batch(batch_size=args.batch_size)
 
     #train the latent networks and generator
-    latent_nets = train(epoch, data_in, latent_nets, num_epochs=50)
+    latent_nets = train(epoch, data_in, latent_nets, num_epochs=50, use_cuda=args.cuda)
 
     #update the latent networks
     dataloader.update_state(latent_nets, latent_net_ids)
@@ -149,4 +172,4 @@ for epoch in range(start_epoch, end_epoch + 1):
             dataloader.save_latent_net(name=MODEL_NAME + "_latentnet_" + str(epoch) + "_", latent_dir=LATENT_CHECK_DIR)
             torch.save(G.state_dict(), '../models/CelebA/' + MODEL_NAME + str(epoch))
 
-logger.close()
+writer.close()
