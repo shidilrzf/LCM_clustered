@@ -82,6 +82,15 @@ class loader(object):
             latent_nets.append(latent_net)
         return latent_nets
 
+    def get_all_nets(self):
+        latent_nets = []
+        for i in range(self.num_clusters):
+            latent_net = getattr(lm, self.latent_net_name)()
+            latent_net = latent_net.to(self.device)
+            latent_net.load_state_dict(torch.load(self.temp_latent_dir + "temp_latent_net_" + str(i)))
+            latent_nets.append(latent_net)
+        return latent_nets
+
     def save_nets(self, nets, net_ids):
         num_nets = len(net_ids)
         for i in range(num_nets):
@@ -97,8 +106,10 @@ class loader(object):
         self.end = end
         data_out = []
         latent_net_ids = []
+        img_indices = []
 
         for i in range(eff_batch):
+            img_indices.append(start + i)
             img, cluster_id = self.dataset.__getitem__(start + i)
             data_out.append(img.unsqueeze(0))
             latent_net_ids.append(cluster_id)
@@ -108,7 +119,11 @@ class loader(object):
         # convert lists to batch_num, channel, h, w
         data_out = torch.cat(data_out).type(torch.FloatTensor).to(self.device)
 
-        return data_out, latent_nets, latent_net_ids
+        return data_out, latent_nets, latent_net_ids, img_indices
+
+    def update_cluster_id(self, img_ind, labels):
+        for ind, label in zip(img_ind, labels):
+            self.dataset.labels[ind] = label
 
     def update_state(self, latent_nets, latent_nets_ids):
         """
