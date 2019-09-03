@@ -31,6 +31,9 @@ class CelebAClusterDataset(Dataset):
         img = torch.from_numpy(img).permute(2, 0, 1)
         return img, cluster_id
 
+    def get_assignments(self):
+        return self.img_list, self.labels
+
 
 class loader(object):
     def __init__(self, dataset, device, K, model_name=None):

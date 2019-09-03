@@ -72,6 +72,16 @@ dataset_fp = '/data/CelebA/celebA_redux_500/*.png'
 train_dataset = CelebAClusterDataset(dataset_fp, latentnet_fp, None)
 dataloader = loader(train_dataset, device, args.num_clusters, model_name)
 
+# Get initial cluster assignments for visualization
+init_img_list, init_labels = train_dataset.get_assignments()
+
+cluster_grid = visualize_clusters(init_img_list, init_labels)
+
+writer.add_image('clusters', cluster_grid, -1)
+
+quit()
+
+
 # Init and load latent space networks
 dataloader.load(latent_net_name, None, None, latentnet_fp)
 

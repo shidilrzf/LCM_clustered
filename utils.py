@@ -1,6 +1,10 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from skimage.transform import resize
+from skimage.io import imread
+import torchvision.utils as tvu
+import cv2
 
 
 def nan_check_and_break(tensor, name=""):
@@ -55,3 +59,18 @@ def sample_uniform(shape, a=-1, b=1, var=1. / 10, use_cuda=False):
     shape = list(shape) if isinstance(shape, tuple) else shape
     type_tfloat = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
     return type_tfloat(*shape).uniform_(a, b) * var
+
+
+def visualize_clusters(imgs, labels, im_size=128, num_cluster=10):
+    labels = np.asarray(labels)
+    img_grid = np.zeros((im_size * num_cluster, im_size * 5, 3))
+    for cluster in range(num_cluster):
+        ind = np.where(labels == cluster)[0]
+        for j in range(5):
+            img = imread(imgs[ind[j]])
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            img = resize(img, (im_size, im_size), mode='constant')
+            img_grid[cluster * im_size:cluster * im_size + im_size, j * im_size:j * im_size + im_size, :] = img
+
+    img_grid *= 255
+    return img_grid.astype(np.uint8)
