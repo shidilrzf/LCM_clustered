@@ -61,16 +61,18 @@ def sample_uniform(shape, a=-1, b=1, var=1. / 10, use_cuda=False):
     return type_tfloat(*shape).uniform_(a, b) * var
 
 
-def visualize_clusters(imgs, labels, im_size=128, num_cluster=10):
+def visualize_clusters(img_list, labels, im_size=128, num_cluster=10):
     labels = np.asarray(labels)
     img_grid = np.zeros((im_size * num_cluster, im_size * 5, 3))
     for cluster in range(num_cluster):
         ind = np.where(labels == cluster)[0]
-        for j in range(5):
-            img = imread(imgs[ind[j]])
+        if ind.shape[0] == 0:
+            continue
+        for j in range(min(ind.shape[0], 5)):
+            img = imread(img_list[ind[j]])
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             img = resize(img, (im_size, im_size), mode='constant')
             img_grid[cluster * im_size:cluster * im_size + im_size, j * im_size:j * im_size + im_size, :] = img
 
     img_grid *= 255
-    return img_grid.astype(np.uint8)
+    return img_grid.astype(np.uint8).transpose(2, 0, 1)

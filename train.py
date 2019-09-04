@@ -79,8 +79,6 @@ cluster_grid = visualize_clusters(init_img_list, init_labels)
 
 writer.add_image('clusters', cluster_grid, -1)
 
-quit()
-
 
 # Init and load latent space networks
 dataloader.load(latent_net_name, None, None, latentnet_fp)
@@ -193,10 +191,6 @@ def update_cluster(data_in, net_in, img_indices, use_cuda):
         for ind in range(num_cluster):
             map_out = net_in[ind](noise)
             g_out = generator(map_out)
-            # print('g_out')
-            # print(g_out.size())
-            # print('data_in')
-            # print(data_in[i].size())
 
             lap_loss = laploss(g_out, data_in[i].unsqueeze(0))
             mse_loss = F.mse_loss(g_out, data_in[i].unsqueeze(0))
@@ -223,7 +217,14 @@ for epoch in range(start_epoch, end_epoch + 1):
         latent_nets = dataloader.get_all_nets()
         new_labels = update_cluster(data_in, latent_nets, img_indices, use_cuda=args.cuda)
         dataloader.update_cluster_id(img_indices, new_labels)
-        #update the latent networks
+        # Display cluster
+        img_list = [dataloader.dataset.img_list[ind] for ind in img_indices]
+        print(img_list)
+        print(new_labels)
+
+        assert(len(img_list) == len(new_labels))
+        cluster_grid = visualize_clusters(img_list, new_labels)
+        writer.add_image('clusters', cluster_grid, epoch)
 
     if epoch % 100 == 0:
         if epoch > 0:
